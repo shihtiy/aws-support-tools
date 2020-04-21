@@ -16,20 +16,20 @@
 
 check_NVMe_in_initrd () {
 
-find_distro=`cat /etc/os-release |sed -n 's|^ID="\([a-z]\{4\}\).*|\1|p'`      # Check if instance is using amazon AMI. 
+find_distro=`cat /etc/os-release |sed -n 's|^ID="\([a-z]\{4\}\).*|\1|p'`      # Check if instance is using amazon AMI.
 
     if [ -f /etc/redhat-release ] ; then
         # Distribution is Red hat
-        lsinitrd /boot/initramfs-$(uname -r).img|grep nvme > /dev/null 2>&1
+        lsinitrd /boot/initramfs-$(uname -r).img | grep "nvme.ko" > /dev/null 2>&1
         if [ $? -ne 0 ]; then
         # NVMe module is not loaded in initrd/initramfs
         echo -e "\n\nERROR  NVMe Module is not loaded in the initramfs image.\n\t- Please run the following command on your instance to recreate initramfs:"
         echo -e '\t# sudo dracut -f -v'
         fi
-    
+
     elif [[ "${find_distro}" == "amzn" ]]; then
         # Amazon Linux
-        lsinitrd /boot/initramfs-$(uname -r).img|grep nvme > /dev/null 2>&1
+        lsinitrd /boot/initramfs-$(uname -r).img | grep "nvme.ko" > /dev/null 2>&1
         if [ $? -ne 0 ]; then
         # NVMe module is not loaded in initrd/initramfs
         echo -e "\n\nERROR  NVMe Module is not loaded in the initramfs image.\n\t- Please run the following command on your instance to recreate initramfs:"
@@ -38,23 +38,23 @@ find_distro=`cat /etc/os-release |sed -n 's|^ID="\([a-z]\{4\}\).*|\1|p'`      # 
 
     elif [[ "${find_distro}" == "sles" ]] ; then
         # Distribution is SuSe Linux
-        lsinitrd /boot/initrd-$(uname -r)|grep nvme > /dev/null 2>&1
+        lsinitrd /boot/initramfs-$(uname -r).img | grep "nvme.ko" > /dev/null 2>&1
         if [ $? -ne 0 ]; then
         # NVMe module is not loaded in initrd/initramfs
         echo -e "\n\nERROR  NVMe Module is not loaded in the initramfs image.\n\t- Please run the following command on your instance to recreate initramfs:"
         echo -e '\t# sudo dracut -f -v'
         fi
-        
+
     elif [ -f /etc/debian_version ] ; then
         # Distribution is debian based(Debian/Ubuntu)
-        lsinitramfs /boot/initrd.img-$(uname -r)|grep nvme > /dev/null 2>&1
+        grep -i "CONFIG_NVME_CORE=y" /boot/config-$(uname -r) > /dev/null 2>&1
         if [ $? -ne 0 ]; then
         # NVMe module is not loaded in initrd/initramfs
         echo -e "\n\nERROR  NVMe Module is not loaded in the initramfs image.\n\t- Please run the following command on your instance to recreate initramfs:"
         echo -e '\t# sudo update-initramfs -c -k all'
         fi
 
-    else 
+    else
         echo -e "\n\nUnsupported OS for this script."
         echo -e "\n\n------------------------------------------------"
         exit 1
@@ -105,11 +105,11 @@ check_fstab () {
                     exit 1
                     echo -e "------------------------------------------------"
                     ;;
-    
+
         esac
         rm /tmp/device_names
 
-    else 
+    else
         rm /etc/fstab.backup.$time_stamp
         rm /etc/fstab.modified.$time_stamp
         echo -e "\n\nOK     fstab file looks fine and does not contain any device names. "
@@ -131,36 +131,27 @@ if [ `id -u` -ne 0 ]; then                                              # Checks
         exit 1
 fi
 
-(grep 'nvme' /boot/System.map-$(uname -r)) > /dev/null 2>&1
+(modinfo nvme || grep 'nvme' /boot/System.map-$(uname -r)) > /dev/null 2>&1
+
 if [ $? -ne 0 ]
     then
-    # NVMe modules is not built into the kernel
-    (modinfo nvme) > /dev/null 2>&1
-    if [ $? -ne 0 ]
-        then
-        # NVMe Module is not installed. 
-        echo -e "------------------------------------------------\nERROR  NVMe Module is not available on your instance. \n\t- Please install NVMe module before changing your instance type to Nitro. Look at the following link for further guidance:"
-        echo -e "\t> https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nvme-ebs-volumes.html"
-
-    else
-        echo -e "------------------------------------------------\n"
-        echo -e "OK     NVMe Module is installed and available on your instance"
-        check_NVMe_in_initrd                # Calling function to check if NVMe module is loaded in initramfs. 
-    fi
+    # NVMe Module is not installed.
+    echo -e "------------------------------------------------\nERROR  NVMe Module is not available on your instance. \n\t- Please install NVMe module before changing your instance type to Nitro. Look at the following link for further guidance:"
+    echo -e "\t> https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nvme-ebs-volumes.html"
 else
-    # NVMe modules is built into the kernel
     echo -e "------------------------------------------------\n"
     echo -e "OK     NVMe Module is installed and available on your instance"
+    check_NVMe_in_initrd                # Calling function to check if NVMe module is loaded in initramfs.
 fi
 
 modinfo ena > /dev/null 2>&1
-if [ $? -ne 0 ] 
+if [ $? -ne 0 ]
     then
-    # ENA Module is not installed. 
+    # ENA Module is not installed.
     echo -e "\n\nERROR  ENA Module is not available on your instance. \n\t- Please install ENA module before changing your instance type to Nitro. Look at the following link for further guidance:"
     echo -e "\t> https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#enhanced-networking-ena-linux"
 
-else 
+else
     ena_version=`modinfo ena|grep -Eo '^version:.*' | awk '{print $2}'`
     echo -e "\n\nOK     ENA Module with version $ena_version is installed and available on your instance"
 
