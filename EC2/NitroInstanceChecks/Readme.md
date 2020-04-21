@@ -11,7 +11,7 @@ You can use this script to do the pre-requisites checks before changing the inst
 **WARNING: Provide "y" only if you want this script to rewrite the current "/etc/fstab" file. If you provide "n" or "No", it will just print the correct /etc/fstab file in the output but would not replace it**
 
 
-## Running the scritps
+## How to run the script
 
 - Place the script on your instance and make it executable
 

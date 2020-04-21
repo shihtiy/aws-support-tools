@@ -132,7 +132,6 @@ if [ `id -u` -ne 0 ]; then                                              # Checks
 fi
 
 (modinfo nvme || grep 'nvme' /boot/System.map-$(uname -r)) > /dev/null 2>&1
-
 if [ $? -ne 0 ]
     then
     # NVMe Module is not installed.
