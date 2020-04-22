@@ -47,7 +47,7 @@ find_distro=`cat /etc/os-release |sed -n 's|^ID="\([a-z]\{4\}\).*|\1|p'`      # 
 
     elif [ -f /etc/debian_version ] ; then
         # Distribution is debian based(Debian/Ubuntu)
-        grep -i "CONFIG_NVME_CORE=y" /boot/config-$(uname -r) > /dev/null 2>&1
+        lsinitramfs /boot/initrd.img-$(uname -r) | grep "nvme.ko" > /dev/null 2>&1
         if [ $? -ne 0 ]; then
         # NVMe module is not loaded in initrd/initramfs
         echo -e "\n\nERROR  NVMe Module is not loaded in the initramfs image.\n\t- Please run the following command on your instance to recreate initramfs:"
